@@ -57,7 +57,7 @@ export default function AppRoutes({ user, setUser, logout }) {
       <Navbar user={user} onLogout={handleLogout} onAddPost={() => setShowAddPost(true)} />
       <AddPostModal open={showAddPost} onClose={() => setShowAddPost(false)} onSubmit={handleAddPost} loading={loadingPost} />
       <Routes>
-        <Route path="/" element={<PostsPage posts={posts} setPosts={setPosts} />} />
+        <Route path="/" element={<PostsPage posts={posts} setPosts={setPosts} user={user} />} />
         <Route path="/signin" element={<SignIn onSignIn={handleSignInSuccess} />} />
         <Route path="/signup" element={<SignUp onSignUp={handleSignUpSuccess} />} />
       </Routes>
