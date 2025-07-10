@@ -1,5 +1,5 @@
 import { useAuth } from './hooks/useAuth';
-import AppRoutes from './AppRoutes';
+import AppRoutes from './routes/AppRoutes';
 
 export default function App() {
   const { user, setUser, logout, authLoading, handleSignIn, handleSignUp } = useAuth();

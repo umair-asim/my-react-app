@@ -1,10 +1,15 @@
-const pool = require('../config/db');
+const prisma = require('../config/prismaClient');
 
 exports.likePost = async (req, res) => {
   const { postId } = req.params;
   const userId = req.user.id;
   try {
-    await pool.query('INSERT INTO likes (user_id, post_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [userId, postId]);
+    await prisma.like.create({
+      data: {
+        user_id: userId,
+        post_id: Number(postId),
+      },
+    }).catch(() => {}); // Ignore duplicate like error due to unique constraint
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -15,7 +20,12 @@ exports.unlikePost = async (req, res) => {
   const { postId } = req.params;
   const userId = req.user.id;
   try {
-    await pool.query('DELETE FROM likes WHERE user_id = $1 AND post_id = $2', [userId, postId]);
+    await prisma.like.deleteMany({
+      where: {
+        user_id: userId,
+        post_id: Number(postId),
+      },
+    });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });

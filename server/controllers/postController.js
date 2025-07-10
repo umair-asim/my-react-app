@@ -1,4 +1,5 @@
-const pool = require('../config/db');
+const prisma = require('../config/prismaClient');
+const jwt = require('jsonwebtoken');
 
 exports.createPost = async (req, res) => {
   const { content } = req.body;
@@ -8,18 +9,20 @@ exports.createPost = async (req, res) => {
     if (req.file) {
       photoUrl = `/uploads/${req.file.filename}`;
     }
-    const insertRes = await pool.query(
-      'INSERT INTO posts (photo, content, user_id) VALUES ($1, $2, $3) RETURNING *',
-      [photoUrl, content, user_id]
-    );
-    res.json({ success: true, post: insertRes.rows[0] });
+    const post = await prisma.post.create({
+      data: {
+        photo: photoUrl,
+        content,
+        user_id,
+      },
+    });
+    res.json({ success: true, post });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 };
 
 exports.getAllPosts = async (req, res) => {
-  const jwt = require('jsonwebtoken');
   try {
     let currentUserId = null;
     const authHeader = req.headers['authorization'];
@@ -30,28 +33,32 @@ exports.getAllPosts = async (req, res) => {
         currentUserId = decoded.id;
       } catch (err) {}
     }
-    const postsRes = await pool.query(`
-      SELECT 
-        posts.id,
-        posts.photo,
-        posts.content,
-        posts.user_id,
-        posts.created_at,
-        users.name as user_name,
-        COUNT(DISTINCT likes.id) as like_count,
-        COUNT(DISTINCT comments.id) as comment_count,
-        COALESCE(
-          BOOL_OR(likes.user_id = $1),
-          false
-        ) as user_liked
-      FROM posts 
-      JOIN users ON posts.user_id = users.id 
-      LEFT JOIN likes ON likes.post_id = posts.id
-      LEFT JOIN comments ON comments.post_id = posts.id
-      GROUP BY posts.id, users.name, users.id
-      ORDER BY posts.created_at DESC
-    `, [currentUserId]);
-    res.json({ success: true, posts: postsRes.rows });
+    const posts = await prisma.post.findMany({
+      orderBy: { created_at: 'desc' },
+      include: {
+        user: { select: { name: true, id: true } },
+        likes: true,
+        comments: true,
+      },
+    });
+    // Map to match the old SQL response
+    const formattedPosts = posts.map(post => {
+      const like_count = post.likes.length;
+      const comment_count = post.comments.length;
+      const user_liked = currentUserId ? post.likes.some(like => like.user_id === currentUserId) : false;
+      return {
+        id: post.id,
+        photo: post.photo,
+        content: post.content,
+        user_id: post.user_id,
+        created_at: post.created_at,
+        user_name: post.user.name,
+        like_count,
+        comment_count,
+        user_liked,
+      };
+    });
+    res.json({ success: true, posts: formattedPosts });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -60,7 +67,7 @@ exports.getAllPosts = async (req, res) => {
 exports.deletePost = async (req, res) => {
   const { postId } = req.params;
   try {
-    await pool.query('DELETE FROM posts WHERE id = $1', [postId]);
+    await prisma.post.delete({ where: { id: Number(postId) } });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -71,8 +78,11 @@ exports.editPost = async (req, res) => {
   const { postId } = req.params;
   const { content } = req.body;
   try {
-    const updateRes = await pool.query('UPDATE posts SET content = $1 WHERE id = $2 RETURNING *', [content, postId]);
-    res.json({ success: true, post: updateRes.rows[0] });
+    const post = await prisma.post.update({
+      where: { id: Number(postId) },
+      data: { content },
+    });
+    res.json({ success: true, post });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

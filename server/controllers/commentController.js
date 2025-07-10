@@ -1,13 +1,16 @@
-const pool = require('../config/db');
+const prisma = require('../config/prismaClient');
 
 exports.getComments = async (req, res) => {
   const { postId } = req.params;
   try {
-    const commentsRes = await pool.query(
-      `SELECT comments.*, users.name as user_name FROM comments JOIN users ON comments.user_id = users.id WHERE comments.post_id = $1 ORDER BY comments.created_at ASC`,
-      [postId]
-    );
-    res.json({ success: true, comments: commentsRes.rows });
+    const comments = await prisma.comment.findMany({
+      where: { post_id: Number(postId) },
+      orderBy: { created_at: 'asc' },
+      include: { user: { select: { name: true } } },
+    });
+    // Add user_name to each comment for compatibility
+    const formatted = comments.map(c => ({ ...c, user_name: c.user.name }));
+    res.json({ success: true, comments: formatted });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -19,13 +22,15 @@ exports.addComment = async (req, res) => {
   const userId = req.user.id;
   if (!comment_text) return res.status(400).json({ success: false, error: 'Comment text required.' });
   try {
-    const insertRes = await pool.query(
-      'INSERT INTO comments (post_id, user_id, comment_text) VALUES ($1, $2, $3) RETURNING *',
-      [postId, userId, comment_text]
-    );
-    const userRes = await pool.query('SELECT name FROM users WHERE id = $1', [userId]);
-    const comment = insertRes.rows[0];
-    comment.user_name = userRes.rows[0].name;
+    const comment = await prisma.comment.create({
+      data: {
+        post_id: Number(postId),
+        user_id: userId,
+        comment_text,
+      },
+      include: { user: { select: { name: true } } },
+    });
+    comment.user_name = comment.user.name;
     res.json({ success: true, comment });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -37,8 +42,11 @@ exports.editComment = async (req, res) => {
   const { comment_text } = req.body;
   if (!comment_text) return res.status(400).json({ success: false, error: 'Comment text required.' });
   try {
-    const updateRes = await pool.query('UPDATE comments SET comment_text = $1 WHERE id = $2 RETURNING *', [comment_text, commentId]);
-    res.json({ success: true, comment: updateRes.rows[0] });
+    const comment = await prisma.comment.update({
+      where: { id: Number(commentId) },
+      data: { comment_text },
+    });
+    res.json({ success: true, comment });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -47,7 +55,7 @@ exports.editComment = async (req, res) => {
 exports.deleteComment = async (req, res) => {
   const { commentId } = req.params;
   try {
-    await pool.query('DELETE FROM comments WHERE id = $1', [commentId]);
+    await prisma.comment.delete({ where: { id: Number(commentId) } });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
