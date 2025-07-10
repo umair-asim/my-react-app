@@ -1,10 +1,25 @@
 import { useEffect, useState } from 'react';
-import { getAuthTokenHeader } from '../utils/auth';
+import AddPostModal from '../components/AddPostModal';
+import {
+  getPosts,
+  createPost,
+  likePost,
+  unlikePost,
+  deletePost,
+  editPost,
+  getComments,
+  addComment,
+  editComment,
+  deleteComment
+} from '../utils/api';
 
-export default function PostsPage({ posts, setPosts, user }) {
+export default function PostsPage({ user }) {
+  const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [showAddPost, setShowAddPost] = useState(false);
+  const [loadingPost, setLoadingPost] = useState(false);
   const [showDeleteId, setShowDeleteId] = useState(null);
-  const [editPost, setEditPost] = useState(null);
+  const [editPostId, setEditPostId] = useState(null);
   const [editContent, setEditContent] = useState('');
   const [showCommentsId, setShowCommentsId] = useState(null);
   const [comments, setComments] = useState([]);
@@ -15,26 +30,39 @@ export default function PostsPage({ posts, setPosts, user }) {
 
   useEffect(() => {
     setLoading(true);
-    const headers = {};
-    if (user) Object.assign(headers, getAuthTokenHeader());
-    fetch('http://localhost:5000/api/posts', { headers })
-      .then(res => res.json())
+    getPosts()
       .then(data => {
         if (data.success) setPosts(data.posts);
       })
       .finally(() => setLoading(false));
   }, [user]);
 
-  // Like/unlike handler
+  const handleAddPost = async ({ content, photo }) => {
+    setLoadingPost(true);
+    try {
+      const formData = new FormData();
+      formData.append('content', content);
+      if (photo) formData.append('photo', photo);
+      const data = await createPost(formData);
+      if (data.success && data.post) {
+        setPosts([data.post, ...posts]);
+        setShowAddPost(false);
+      }
+    } catch (err) {
+      alert('Failed to create post.');
+    }
+    setLoadingPost(false);
+  };
+
   const handleLike = async (postId, isLiked) => {
     if (!user) return;
     try {
-      const method = isLiked ? 'DELETE' : 'POST';
-      const res = await fetch(`http://localhost:5000/api/posts/${postId}/like`, {
-        method,
-        headers: getAuthTokenHeader(),
-      });
-      const data = await res.json();
+      let data;
+      if (isLiked) {
+        data = await unlikePost(postId);
+      } else {
+        data = await likePost(postId);
+      }
       if (data.success) {
         setPosts(prevPosts => prevPosts.map(post => {
           if (post.id === postId) {
@@ -47,19 +75,12 @@ export default function PostsPage({ posts, setPosts, user }) {
           return post;
         }));
       }
-    } catch (err) {
-      
-    }
+    } catch (err) {}
   };
 
-  // Delete post handler
   const handleDelete = async (postId) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/posts/${postId}`, {
-        method: 'DELETE',
-        headers: getAuthTokenHeader(),
-      });
-      const data = await res.json();
+      const data = await deletePost(postId);
       if (data.success) {
         setPosts(prev => prev.filter(p => p.id !== postId));
         setShowDeleteId(null);
@@ -67,47 +88,30 @@ export default function PostsPage({ posts, setPosts, user }) {
     } catch (err) {}
   };
 
-  // Edit post handler
   const handleEdit = async (postId) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/posts/${postId}`, {
-        method: 'PUT',
-        headers: {
-          ...getAuthTokenHeader(),
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ content: editContent }),
-      });
-      const data = await res.json();
+      const data = await editPost(postId, editContent);
       if (data.success) {
         setPosts(prev => prev.map(p => p.id === postId ? { ...p, content: data.post.content } : p));
-        setEditPost(null);
+        setEditPostId(null);
       }
     } catch (err) {}
   };
 
-  // Fetch comments for a post
   const fetchComments = async (postId) => {
     setCommentsLoading(true);
     setShowCommentsId(postId);
     try {
-      const res = await fetch(`http://localhost:5000/api/posts/${postId}/comments`);
-      const data = await res.json();
+      const data = await getComments(postId);
       if (data.success) setComments(data.comments);
     } catch (err) {}
     setCommentsLoading(false);
   };
 
-  // Add comment
   const handleAddComment = async (postId) => {
     if (!commentText.trim()) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/posts/${postId}/comments`, {
-        method: 'POST',
-        headers: { ...getAuthTokenHeader(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ comment_text: commentText }),
-      });
-      const data = await res.json();
+      const data = await addComment(postId, commentText);
       if (data.success) {
         setComments((prev) => [...prev, data.comment]);
         setCommentText('');
@@ -116,16 +120,10 @@ export default function PostsPage({ posts, setPosts, user }) {
     } catch (err) {}
   };
 
-  // Edit comment
   const handleEditComment = async (commentId) => {
     if (!editCommentText.trim()) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/comments/${commentId}`, {
-        method: 'PUT',
-        headers: { ...getAuthTokenHeader(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ comment_text: editCommentText }),
-      });
-      const data = await res.json();
+      const data = await editComment(commentId, editCommentText);
       if (data.success) {
         setComments((prev) => prev.map(c => c.id === commentId ? { ...c, comment_text: editCommentText } : c));
         setEditCommentId(null);
@@ -134,17 +132,11 @@ export default function PostsPage({ posts, setPosts, user }) {
     } catch (err) {}
   };
 
-  // Delete comment
   const handleDeleteComment = async (commentId) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/comments/${commentId}`, {
-        method: 'DELETE',
-        headers: getAuthTokenHeader(),
-      });
-      const data = await res.json();
+      const data = await deleteComment(commentId);
       if (data.success) {
         setComments((prev) => prev.filter(c => c.id !== commentId));
-        // Find the postId for this comment
         const deletedComment = comments.find(c => c.id === commentId);
         if (deletedComment) {
           setPosts(prevPosts => prevPosts.map(post => post.id === deletedComment.post_id ? { ...post, comment_count: Math.max(0, parseInt(post.comment_count) - 1) } : post));
@@ -156,6 +148,13 @@ export default function PostsPage({ posts, setPosts, user }) {
   return (
     <div className="min-h-screen w-full flex flex-col items-center bg-[#0B1D26] py-8">
       <div className="w-full max-w-2xl flex flex-col gap-8">
+        <button
+          className="mb-4 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold shadow-lg hover:bg-blue-700 transition self-center"
+          onClick={() => setShowAddPost(true)}
+        >
+          Add New Post
+        </button>
+        <AddPostModal open={showAddPost} onClose={() => setShowAddPost(false)} onSubmit={handleAddPost} loading={loadingPost} />
         <h1 className="text-5xl font-extrabold text-white mb-6 tracking-tight text-center">Posts</h1>
         {loading && <div className="text-white text-center">Loading...</div>}
         {posts.length === 0 && !loading && (
@@ -181,7 +180,7 @@ export default function PostsPage({ posts, setPosts, user }) {
                 </button>
                 <button
                   className="bg-yellow-400 hover:bg-yellow-500 text-black rounded-full p-2"
-                  onClick={() => { setEditPost(post.id); setEditContent(post.content); }}
+                  onClick={() => { setEditPostId(post.id); setEditContent(post.content); }}
                   title="Edit"
                 >
                   <svg width="18" height="18" fill="none" stroke="#000" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19.5 3 21l1.5-4L16.5 3.5z"/></svg>
@@ -310,7 +309,7 @@ export default function PostsPage({ posts, setPosts, user }) {
               </div>
             )}
             {/* Edit post modal */}
-            {editPost === post.id && (
+            {editPostId === post.id && (
               <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
                 <div className="bg-white rounded-xl p-6 shadow-xl flex flex-col gap-4 min-w-[300px]">
                   <div className="text-lg font-bold text-blue-700">Edit Post</div>
@@ -320,7 +319,7 @@ export default function PostsPage({ posts, setPosts, user }) {
                     onChange={e => setEditContent(e.target.value)}
                   />
                   <div className="flex gap-4 justify-end">
-                    <button className="px-4 py-2 rounded bg-gray-200" onClick={() => setEditPost(null)}>Cancel</button>
+                    <button className="px-4 py-2 rounded bg-gray-200" onClick={() => setEditPostId(null)}>Cancel</button>
                     <button className="px-4 py-2 rounded bg-blue-600 text-white" onClick={() => handleEdit(post.id)}>Save</button>
                   </div>
                 </div>

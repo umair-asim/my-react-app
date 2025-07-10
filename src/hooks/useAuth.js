@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getAuthTokenHeader } from '../utils/auth';
 
 export const useAuth = () => {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     setUser(null);
@@ -30,10 +32,23 @@ export const useAuth = () => {
     }
   }, []);
 
+  const handleSignIn = ({ user, token }) => {
+    setUser(user);
+    localStorage.setItem('token', token);
+    navigate('/');
+  };
+
+  const handleSignUp = ({ user, token }) => {
+    setUser(user);
+    localStorage.setItem('token', token);
+    navigate('/');
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem('token');
+    navigate('/signin');
   };
 
-  return { user, setUser, logout, authLoading };
+  return { user, setUser, logout, authLoading, handleSignIn, handleSignUp };
 };
