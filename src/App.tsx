@@ -1,7 +1,9 @@
 import { useAuth } from './hooks/useAuth';
 import AppRoutes from './routes/AppRoutes';
 
-export default function App() {
+import React from 'react';
+
+export default function App(): React.ReactElement {
   const { user, setUser, logout, authLoading, handleSignIn, handleSignUp } = useAuth();
 
   if (authLoading) {
@@ -16,7 +18,6 @@ export default function App() {
     <div className="min-h-screen bg-[#0B1D26]">
       <AppRoutes
         user={user}
-        setUser={setUser}
         logout={logout}
         handleSignIn={handleSignIn}
         handleSignUp={handleSignUp}

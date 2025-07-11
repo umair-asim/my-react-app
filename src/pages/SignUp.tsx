@@ -1,34 +1,42 @@
-import { useState } from 'react';
+
+
+import { useState, ChangeEvent, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { signUp } from '../utils/api';
 
-export default function SignUp({ onSignUp }) {
+interface SignUpProps {
+  onSignUp: (data: { user: any; token: string }) => void;
+}
+
+interface SignUpForm {
+  name: string;
+  email: string;
+  password: string;
+}
+
+export default function SignUp({ onSignUp }: SignUpProps) {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [form, setForm] = useState<SignUpForm>({ name: '', email: '', password: '' });
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
+  const [success, setSuccess] = useState<string>('');
 
-  const handleChange = (e) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     setSuccess('');
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5000/api/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
-      if (data.success) {
+      const data = await signUp(form);
+      if (data.success && data.user && data.token !== undefined && data.token !== null) {
         setSuccess('Signup successful!');
         setForm({ name: '', email: '', password: '' });
         setTimeout(() => {
-          onSignUp({ user: data.user, token: data.token });
+          onSignUp({ user: data.user, token: String(data.token) });
         }, 1200);
       } else {
         setError(data.error || 'Signup failed.');
@@ -40,7 +48,7 @@ export default function SignUp({ onSignUp }) {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center" style={{background: '#0B1D26'}}>
+    <div className="min-h-screen w-full flex items-center justify-center" style={{ background: '#0B1D26' }}>
       <div className="w-full max-w-md bg-white/90 shadow-2xl rounded-3xl p-10 border border-blue-100 flex flex-col items-center">
         <h2 className="text-4xl font-extrabold mb-8 text-blue-700 tracking-tight">Create Your Account</h2>
         <form onSubmit={handleSubmit} className="w-full space-y-6">

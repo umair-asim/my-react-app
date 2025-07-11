@@ -1,7 +1,9 @@
-const prisma = require('../config/prismaClient');
+import { Request, Response } from 'express';
+import prisma from '../config/prismaClient';
 
-exports.likePost = async (req, res) => {
+export const likePost = async (req: Request, res: Response) => {
   const { postId } = req.params;
+  // @ts-ignore
   const userId = req.user.id;
   try {
     await prisma.like.create({
@@ -9,15 +11,16 @@ exports.likePost = async (req, res) => {
         user_id: userId,
         post_id: Number(postId),
       },
-    }).catch(() => {}); // Ignore duplicate like error due to unique constraint
+    }).catch(() => {});
     res.json({ success: true });
-  } catch (err) {
+  } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
 };
 
-exports.unlikePost = async (req, res) => {
+export const unlikePost = async (req: Request, res: Response) => {
   const { postId } = req.params;
+  // @ts-ignore
   const userId = req.user.id;
   try {
     await prisma.like.deleteMany({
@@ -27,7 +30,7 @@ exports.unlikePost = async (req, res) => {
       },
     });
     res.json({ success: true });
-  } catch (err) {
+  } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
 };

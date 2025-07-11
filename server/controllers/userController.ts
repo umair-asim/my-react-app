@@ -1,9 +1,9 @@
-const prisma = require('../config/prismaClient');
-const bcrypt = require('bcrypt');
-const generateToken = require('../utils/generateToken');
+import { Request, Response } from 'express';
+import prisma from '../config/prismaClient';
+import bcrypt from 'bcrypt';
+import generateToken from '../utils/generateToken';
 
-
-exports.signup = async (req, res) => {
+export const signup = async (req: Request, res: Response) => {
   const { name, email, password } = req.body;
   if (!name || !email || !password) {
     return res.status(400).json({ success: false, error: 'All fields are required.' });
@@ -25,13 +25,12 @@ exports.signup = async (req, res) => {
     });
     const token = generateToken(user);
     res.json({ success: true, token, user });
-  } catch (err) {
+  } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
 };
 
-
-exports.signin = async (req, res) => {
+export const signin = async (req: Request, res: Response) => {
   const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ success: false, error: 'Email and password required.' });
@@ -51,27 +50,27 @@ exports.signin = async (req, res) => {
       token,
       user: { id: user.id, name: user.name, email: user.email, public_id: user.public_id },
     });
-  } catch (err) {
+  } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
 };
 
-
-exports.getMe = async (req, res) => {
+export const getMe = async (req: Request, res: Response) => {
+  // @ts-ignore
+  const userId = req.user.id;
   try {
     const user = await prisma.user.findUnique({
-      where: { id: req.user.id },
+      where: { id: userId },
       select: { id: true, name: true, email: true, public_id: true },
     });
     if (!user) return res.status(404).json({ success: false, error: 'User not found.' });
     res.json({ success: true, user });
-  } catch (err) {
+  } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
 };
 
-
-exports.getUserByPublicId = async (req, res) => {
+export const getUserByPublicId = async (req: Request, res: Response) => {
   try {
     const user = await prisma.user.findUnique({
       where: { public_id: req.params.publicId },
@@ -79,7 +78,7 @@ exports.getUserByPublicId = async (req, res) => {
     });
     if (!user) return res.status(404).json({ success: false, error: 'User not found.' });
     res.json({ success: true, user });
-  } catch (err) {
+  } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
 };

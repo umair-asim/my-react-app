@@ -1,15 +1,24 @@
-import { useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 
-export default function AddPostModal({ open, onClose, onSubmit, loading }) {
-  const [content, setContent] = useState('');
-  const [photo, setPhoto] = useState(null);
-  const fileInput = useRef();
+interface AddPostModalProps {
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (data: { content: string; photo: File | null }) => void;
+  loading: boolean;
+}
 
-  const handleFileChange = (e) => {
-    setPhoto(e.target.files[0]);
+const AddPostModal: React.FC<AddPostModalProps> = ({ open, onClose, onSubmit, loading }) => {
+  const [content, setContent] = useState<string>('');
+  const [photo, setPhoto] = useState<File | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setPhoto(e.target.files[0]);
+    }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!content.trim() && !photo) return;
     onSubmit({ content, photo });
@@ -51,4 +60,6 @@ export default function AddPostModal({ open, onClose, onSubmit, loading }) {
       </div>
     </div>
   );
-}
+};
+
+export default AddPostModal;

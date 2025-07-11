@@ -4,7 +4,15 @@ import PostsPage from '../pages/PostsPage';
 import SignIn from '../pages/SignIn';
 import SignUp from '../pages/SignUp';
 
-export default function AppRoutes({ user, logout, handleSignIn, handleSignUp }) {
+
+interface AppRoutesProps {
+  user: any;
+  logout: () => void;
+  handleSignIn: (data: { user: any; token: string }) => void;
+  handleSignUp: (data: { user: any; token: string }) => void;
+}
+
+export default function AppRoutes({ user, logout, handleSignIn, handleSignUp }: AppRoutesProps) {
   return (
     <>
       <Navbar user={user} onLogout={logout} />

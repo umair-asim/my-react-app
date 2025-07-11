@@ -1,21 +1,35 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getAuthTokenHeader } from '../utils/auth';
+import { getMe } from '../utils/api';
 
-export const useAuth = () => {
-  const [user, setUser] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true);
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  public_id: string;
+  [key: string]: any;
+}
+
+interface AuthReturn {
+  user: User | null;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
+  logout: () => void;
+  authLoading: boolean;
+  handleSignIn: (data: { user: User; token: string }) => void;
+  handleSignUp: (data: { user: User; token: string }) => void;
+}
+
+export const useAuth = (): AuthReturn => {
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState<boolean>(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     setUser(null);
     const token = localStorage.getItem('token');
     if (token) {
-      fetch('http://localhost:5000/api/me', {
-        headers: getAuthTokenHeader(),
-      })
-        .then(res => res.json())
-        .then(data => {
+      getMe()
+        .then((data: any) => {
           if (data.success) setUser(data.user);
           else {
             setUser(null);
@@ -32,13 +46,13 @@ export const useAuth = () => {
     }
   }, []);
 
-  const handleSignIn = ({ user, token }) => {
+  const handleSignIn = ({ user, token }: { user: User; token: string }) => {
     setUser(user);
     localStorage.setItem('token', token);
     navigate('/');
   };
 
-  const handleSignUp = ({ user, token }) => {
+  const handleSignUp = ({ user, token }: { user: User; token: string }) => {
     setUser(user);
     localStorage.setItem('token', token);
     navigate('/');

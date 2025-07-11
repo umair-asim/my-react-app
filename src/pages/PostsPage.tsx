@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import AddPostModal from '../components/AddPostModal';
 import {
@@ -13,31 +14,63 @@ import {
   deleteComment
 } from '../utils/api';
 
-export default function PostsPage({ user }) {
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [showAddPost, setShowAddPost] = useState(false);
-  const [loadingPost, setLoadingPost] = useState(false);
-  const [showDeleteId, setShowDeleteId] = useState(null);
-  const [editPostId, setEditPostId] = useState(null);
-  const [editContent, setEditContent] = useState('');
-  const [showCommentsId, setShowCommentsId] = useState(null);
-  const [comments, setComments] = useState([]);
-  const [commentText, setCommentText] = useState('');
-  const [editCommentId, setEditCommentId] = useState(null);
-  const [editCommentText, setEditCommentText] = useState('');
-  const [commentsLoading, setCommentsLoading] = useState(false);
+interface User {
+  id: number;
+  name?: string;
+  email?: string;
+  // add more fields as needed
+}
+
+interface Post {
+  id: number;
+  user_id: number;
+  user_name?: string;
+  content: string;
+  photo?: string;
+  created_at: string;
+  like_count: number | string;
+  comment_count: number | string;
+  user_liked: boolean;
+}
+
+interface Comment {
+  id: number;
+  user_id: number;
+  user_name: string;
+  post_id: number;
+  comment_text: string;
+  created_at: string;
+}
+
+interface PostsPageProps {
+  user: User | null;
+}
+
+export default function PostsPage({ user }: PostsPageProps) {
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [showAddPost, setShowAddPost] = useState<boolean>(false);
+  const [loadingPost, setLoadingPost] = useState<boolean>(false);
+  const [showDeleteId, setShowDeleteId] = useState<number | null>(null);
+  const [editPostId, setEditPostId] = useState<number | null>(null);
+  const [editContent, setEditContent] = useState<string>('');
+  const [showCommentsId, setShowCommentsId] = useState<number | null>(null);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [commentText, setCommentText] = useState<string>('');
+  const [editCommentId, setEditCommentId] = useState<number | null>(null);
+  const [editCommentText, setEditCommentText] = useState<string>('');
+  const [commentsLoading, setCommentsLoading] = useState<boolean>(false);
 
   useEffect(() => {
     setLoading(true);
     getPosts()
-      .then(data => {
+      .then((data: any) => {
         if (data.success) setPosts(data.posts);
       })
       .finally(() => setLoading(false));
   }, [user]);
 
-  const handleAddPost = async ({ content, photo }) => {
+  const handleAddPost = async ({ content, photo }: { content: string; photo?: File }) => {
     setLoadingPost(true);
     try {
       const formData = new FormData();
@@ -54,10 +87,10 @@ export default function PostsPage({ user }) {
     setLoadingPost(false);
   };
 
-  const handleLike = async (postId, isLiked) => {
+  const handleLike = async (postId: number, isLiked: boolean) => {
     if (!user) return;
     try {
-      let data;
+      let data: any;
       if (isLiked) {
         data = await unlikePost(postId);
       } else {
@@ -69,7 +102,7 @@ export default function PostsPage({ user }) {
             return {
               ...post,
               user_liked: !isLiked,
-              like_count: isLiked ? parseInt(post.like_count) - 1 : parseInt(post.like_count) + 1
+              like_count: isLiked ? parseInt(post.like_count as string) - 1 : parseInt(post.like_count as string) + 1
             };
           }
           return post;
@@ -78,9 +111,9 @@ export default function PostsPage({ user }) {
     } catch (err) {}
   };
 
-  const handleDelete = async (postId) => {
+  const handleDelete = async (postId: number) => {
     try {
-      const data = await deletePost(postId);
+      const data: any = await deletePost(postId);
       if (data.success) {
         setPosts(prev => prev.filter(p => p.id !== postId));
         setShowDeleteId(null);
@@ -88,9 +121,9 @@ export default function PostsPage({ user }) {
     } catch (err) {}
   };
 
-  const handleEdit = async (postId) => {
+  const handleEdit = async (postId: number) => {
     try {
-      const data = await editPost(postId, editContent);
+      const data: any = await editPost(postId, editContent);
       if (data.success) {
         setPosts(prev => prev.map(p => p.id === postId ? { ...p, content: data.post.content } : p));
         setEditPostId(null);
@@ -98,32 +131,32 @@ export default function PostsPage({ user }) {
     } catch (err) {}
   };
 
-  const fetchComments = async (postId) => {
+  const fetchComments = async (postId: number) => {
     setCommentsLoading(true);
     setShowCommentsId(postId);
     try {
-      const data = await getComments(postId);
+      const data: any = await getComments(postId);
       if (data.success) setComments(data.comments);
     } catch (err) {}
     setCommentsLoading(false);
   };
 
-  const handleAddComment = async (postId) => {
+  const handleAddComment = async (postId: number) => {
     if (!commentText.trim()) return;
     try {
-      const data = await addComment(postId, commentText);
+      const data: any = await addComment(postId, commentText);
       if (data.success) {
         setComments((prev) => [...prev, data.comment]);
         setCommentText('');
-        setPosts(prevPosts => prevPosts.map(post => post.id === postId ? { ...post, comment_count: parseInt(post.comment_count) + 1 } : post));
+        setPosts(prevPosts => prevPosts.map(post => post.id === postId ? { ...post, comment_count: parseInt(post.comment_count as string) + 1 } : post));
       }
     } catch (err) {}
   };
 
-  const handleEditComment = async (commentId) => {
+  const handleEditComment = async (commentId: number) => {
     if (!editCommentText.trim()) return;
     try {
-      const data = await editComment(commentId, editCommentText);
+      const data: any = await editComment(commentId, editCommentText);
       if (data.success) {
         setComments((prev) => prev.map(c => c.id === commentId ? { ...c, comment_text: editCommentText } : c));
         setEditCommentId(null);
@@ -132,14 +165,14 @@ export default function PostsPage({ user }) {
     } catch (err) {}
   };
 
-  const handleDeleteComment = async (commentId) => {
+  const handleDeleteComment = async (commentId: number) => {
     try {
-      const data = await deleteComment(commentId);
+      const data: any = await deleteComment(commentId);
       if (data.success) {
         setComments((prev) => prev.filter(c => c.id !== commentId));
         const deletedComment = comments.find(c => c.id === commentId);
         if (deletedComment) {
-          setPosts(prevPosts => prevPosts.map(post => post.id === deletedComment.post_id ? { ...post, comment_count: Math.max(0, parseInt(post.comment_count) - 1) } : post));
+          setPosts(prevPosts => prevPosts.map(post => post.id === deletedComment.post_id ? { ...post, comment_count: Math.max(0, parseInt(post.comment_count as string) - 1) } : post));
         }
       }
     } catch (err) {}
@@ -148,13 +181,24 @@ export default function PostsPage({ user }) {
   return (
     <div className="min-h-screen w-full flex flex-col items-center bg-[#0B1D26] py-8">
       <div className="w-full max-w-2xl flex flex-col gap-8">
-        <button
-          className="mb-4 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold shadow-lg hover:bg-blue-700 transition self-center"
-          onClick={() => setShowAddPost(true)}
-        >
-          Add New Post
-        </button>
-        <AddPostModal open={showAddPost} onClose={() => setShowAddPost(false)} onSubmit={handleAddPost} loading={loadingPost} />
+        {user && (
+          <>
+            <button
+              className="mb-4 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold shadow-lg hover:bg-blue-700 transition self-center"
+              onClick={() => setShowAddPost(true)}
+            >
+              Add New Post
+            </button>
+            <AddPostModal
+              open={showAddPost}
+              onClose={() => setShowAddPost(false)}
+              onSubmit={(data: { content: string; photo: File | null }) => {
+                handleAddPost({ content: data.content, photo: data.photo ?? undefined });
+              }}
+              loading={loadingPost}
+            />
+          </>
+        )}
         <h1 className="text-5xl font-extrabold text-white mb-6 tracking-tight text-center">Posts</h1>
         {loading && <div className="text-white text-center">Loading...</div>}
         {posts.length === 0 && !loading && (
@@ -215,7 +259,7 @@ export default function PostsPage({ user }) {
                   </svg>
                 </button>
                 <span className="text-white text-xs font-semibold select-none">
-                  {parseInt(post.like_count) || 0}
+                  {parseInt(String(post.like_count)) || 0}
                 </span>
                 {/* Comment button */}
                 <button
@@ -223,11 +267,11 @@ export default function PostsPage({ user }) {
                   onClick={() => fetchComments(post.id)}
                   title="Show comments"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" fill={parseInt(post.comment_count) > 0 ? '#22c55e' : 'none'} viewBox="0 0 24 24" stroke="#000" strokeWidth="2" className="w-7 h-7">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill={parseInt(String(post.comment_count)) > 0 ? '#22c55e' : 'none'} viewBox="0 0 24 24" stroke="#000" strokeWidth="2" className="w-7 h-7">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                   </svg>
                   <span className="text-black text-xs font-semibold select-none ml-1">
-                    {parseInt(post.comment_count) || 0}
+                    {parseInt(String(post.comment_count)) || 0}
                   </span>
                 </button>
               </div>

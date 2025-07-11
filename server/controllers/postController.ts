@@ -1,13 +1,15 @@
-const prisma = require('../config/prismaClient');
-const jwt = require('jsonwebtoken');
+import { Request, Response } from 'express';
+import prisma from '../config/prismaClient';
+import jwt from 'jsonwebtoken';
 
-exports.createPost = async (req, res) => {
+export const createPost = async (req: Request, res: Response) => {
   const { content } = req.body;
+  // @ts-ignore
   let user_id = req.user.id;
   try {
-    let photoUrl = null;
+    let photoUrl: string | null = null;
     if (req.file) {
-      photoUrl = `/uploads/${req.file.filename}`;
+      photoUrl = `/uploads/${(req.file as any).filename}`;
     }
     const post = await prisma.post.create({
       data: {
@@ -17,19 +19,19 @@ exports.createPost = async (req, res) => {
       },
     });
     res.json({ success: true, post });
-  } catch (err) {
+  } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
 };
 
-exports.getAllPosts = async (req, res) => {
+export const getAllPosts = async (req: Request, res: Response) => {
   try {
-    let currentUserId = null;
+    let currentUserId: number | null = null;
     const authHeader = req.headers['authorization'];
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
       try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as any;
         currentUserId = decoded.id;
       } catch (err) {}
     }
@@ -41,11 +43,10 @@ exports.getAllPosts = async (req, res) => {
         comments: true,
       },
     });
-    // Map to match the old SQL response
-    const formattedPosts = posts.map(post => {
+    const formattedPosts = posts.map((post: any) => {
       const like_count = post.likes.length;
       const comment_count = post.comments.length;
-      const user_liked = currentUserId ? post.likes.some(like => like.user_id === currentUserId) : false;
+      const user_liked = currentUserId ? post.likes.some((like: any) => like.user_id === currentUserId) : false;
       return {
         id: post.id,
         photo: post.photo,
@@ -59,22 +60,22 @@ exports.getAllPosts = async (req, res) => {
       };
     });
     res.json({ success: true, posts: formattedPosts });
-  } catch (err) {
+  } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
 };
 
-exports.deletePost = async (req, res) => {
+export const deletePost = async (req: Request, res: Response) => {
   const { postId } = req.params;
   try {
     await prisma.post.delete({ where: { id: Number(postId) } });
     res.json({ success: true });
-  } catch (err) {
+  } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
 };
 
-exports.editPost = async (req, res) => {
+export const editPost = async (req: Request, res: Response) => {
   const { postId } = req.params;
   const { content } = req.body;
   try {
@@ -83,7 +84,7 @@ exports.editPost = async (req, res) => {
       data: { content },
     });
     res.json({ success: true, post });
-  } catch (err) {
+  } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
 };
